@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package candlestick;
+
+option go_package = "github.com/LEVI-Tempset/Candle/pkg/proto/candlestick";
+
+// Single candlestick data
+message Candlestick {
+  // Timestamp (Unix timestamp in seconds)
+  int64 timestamp = 1;
+
+  // Opening price
+  double open = 2;
+
+  // Closing price
+  double close = 3;
+
+  // Highest price
+  double high = 4;
+
+  // Lowest price
+  double low = 5;
+
+  // Trading volume
+  double volume = 6;
+}
+
+// A series of candlestick data
+message CandlestickSeries {
+  // List of candlestick data
+  repeated Candlestick candlesticks = 1;
+}
+
+// Time range
+message TimeRange {
+  // Start time (Unix timestamp in seconds)
+  int64 start_time = 1;
+
+  // End time (Unix timestamp in seconds)
+  int64 end_time = 2;
+}
+
+// Parameters for requesting candlestick data
+message CandlestickRequest {
+  // Time range
+  TimeRange time_range = 1;
+
+  // Time interval (e.g., 1m, 5m, 1h, 1d, etc.)
+  string interval = 2;
+}
+
+// Response containing candlestick data
+message CandlestickResponse {
+  // List of candlestick data
+  repeated Candlestick candlesticks = 1;
+}
