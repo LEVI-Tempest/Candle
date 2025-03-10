@@ -1,3 +1,3 @@
-module github.com/LEVI-Tempset/Candle
+module github.com/LEVI-Tempest/Candle
 
 go 1.21.5

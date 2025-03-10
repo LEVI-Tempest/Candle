@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package candlestick;
+import "errors/errors.proto";
+
+option go_package = ".;v1";
+
+enum ErrorReason {
+  // default error code
+  option (.errors.default_code) = 500;
+
+  INTERNAL_ERROR = 0 [(.errors.code) = 500];
+  VALIDATE_FAIL = 1 [(.errors.code) = 400];
+  NOT_FOUND = 2 [(.errors.code) = 404];
+}

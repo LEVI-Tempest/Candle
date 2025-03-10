@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package candlestick;
 
-option go_package = "github.com/LEVI-Tempset/Candle/pkg/proto/candlestick";
+option go_package = ".;v1";
 
 // Single candlestick data
 message Candlestick {
