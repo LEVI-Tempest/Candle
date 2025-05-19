@@ -46,6 +46,16 @@ func (c *CandlestickWrapper) Yin() bool {
 	return !c.Yang()
 }
 
+// IsBullish Yang
+func (c *CandlestickWrapper) IsBullish() bool {
+	return c.Yang()
+}
+
+// IsBearish Yin
+func (c *CandlestickWrapper) IsBearish() bool {
+	return c.Yin()
+}
+
 // DetermineTrend returns true if the candlestick is a long term yang
 func DetermineTrend(cs []CandlestickWrapper, days int) Trend {
 	if len(cs) <= days {
