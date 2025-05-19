@@ -9,6 +9,13 @@ Ref: Japanese Candlestick Charting Techniques https://book.douban.com/subject/21
 TODO:  
 https://blog.csdn.net/Eumenides_max/article/details/144694349
 
+## charting
+项目地址：go-echarts GitHub：https://github.com/go-echarts/go-echarts  
+文档：go-echarts Handbook：https://go-echarts.github.io/go-echarts/#/  
+示例：go-echarts Examples：https://github.com/go-echarts/examples  
+
+
+
 ## Real time
 
 东方财富网的API接口  
