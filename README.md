@@ -9,6 +9,9 @@ Ref: Japanese Candlestick Charting Techniques https://book.douban.com/subject/21
 TODO:  
 https://blog.csdn.net/Eumenides_max/article/details/144694349
 
+## TODOs
+https://g.co/gemini/share/4d933ed3ad57
+
 ## charting
 项目地址：go-echarts GitHub：https://github.com/go-echarts/go-echarts  
 文档：go-echarts Handbook：https://go-echarts.github.io/go-echarts/#/  

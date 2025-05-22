@@ -1,9 +1,13 @@
 package charting
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"time"
 
+	"github.com/LEVI-Tempest/Candle/pkg/identify"
+	v1 "github.com/LEVI-Tempest/Candle/pkg/proto"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -318,4 +322,536 @@ func (KlineExamples) Examples() {
 
 	}
 	page.Render(io.MultiWriter(f))
+}
+
+// Enhanced Kline Chart with Pattern Recognition
+// 带有形态识别的增强K线图
+
+// TimeFrame represents different time periods for candlestick charts
+// 支持不同时间周期的切换
+type TimeFrame string
+
+const (
+	TimeFrame1Min  TimeFrame = "1m"
+	TimeFrame5Min  TimeFrame = "5m"
+	TimeFrame15Min TimeFrame = "15m"
+	TimeFrame1Hour TimeFrame = "1h"
+	TimeFrame1Day  TimeFrame = "1d"
+	TimeFrame1Week TimeFrame = "1w"
+)
+
+// Kline represents a candlestick chart with additional functionality
+// K线图结构，包含额外功能
+type Kline struct {
+	chart      *charts.Kline
+	data       []identify.CandlestickWrapper
+	currentPos int
+	timeFrame  TimeFrame
+}
+
+// TrendType represents the type of trend
+// 趋势类型
+type TrendType string
+
+const (
+	TrendTypeUp   TrendType = "up"
+	TrendTypeDown TrendType = "down"
+)
+
+// LevelType represents support or resistance level
+// 支撑阻力位类型
+type LevelType string
+
+const (
+	LevelTypeSupport    LevelType = "support"
+	LevelTypeResistance LevelType = "resistance"
+)
+
+// Point represents a coordinate point
+// 坐标点
+type Point struct {
+	X float64
+	Y float64
+}
+
+// EnhancedKline represents an enhanced candlestick chart with additional features
+// 优化后的K线数据结构
+type EnhancedKline struct {
+	*charts.Kline
+	Patterns          []Pattern                     // Detected patterns (识别出的形态)
+	Indicators        map[string][]float64          // Technical indicators (技术指标)
+	TrendLines        []TrendLine                   // Trend lines (趋势线)
+	SupportResistance []Level                       // Support and resistance levels (支撑阻力位)
+	TimeFrame         TimeFrame                     // Current time frame (当前时间周期)
+	Data              []identify.CandlestickWrapper // Candlestick data (蜡烛图数据)
+}
+
+// Pattern represents information about a detected candlestick pattern
+// 形态信息
+type Pattern struct {
+	Type     string  // Pattern type (形态类型)
+	Position int     // Position in the data (位置)
+	Strength float64 // Pattern strength (形态强度)
+	Risk     float64 // Risk level (风险等级)
+	Price    float64 // Price at which pattern was detected (检测到形态的价格)
+	Time     string  // Time when pattern was detected (检测到形态的时间)
+}
+
+// TrendLine represents a trend line on the chart
+// 趋势线
+type TrendLine struct {
+	StartPoint Point     // Starting point (起始点)
+	EndPoint   Point     // Ending point (结束点)
+	Type       TrendType // Trend type: up/down (上升/下降)
+}
+
+// Level represents a support or resistance level
+// 支撑阻力位
+type Level struct {
+	Price    float64   // Price level (价格水平)
+	Type     LevelType // Level type: support/resistance (支撑/阻力)
+	Strength float64   // Level strength (强度)
+}
+
+// NewKline creates a new Kline instance
+// 创建新的K线实例
+func NewKline() *Kline {
+	return &Kline{
+		chart:     charts.NewKLine(),
+		data:      make([]identify.CandlestickWrapper, 0),
+		timeFrame: TimeFrame1Day,
+	}
+}
+
+// NewEnhancedKline creates a new EnhancedKline instance
+// 创建新的增强K线实例
+func NewEnhancedKline() *EnhancedKline {
+	return &EnhancedKline{
+		Kline:             charts.NewKLine(),
+		Patterns:          make([]Pattern, 0),
+		Indicators:        make(map[string][]float64),
+		TrendLines:        make([]TrendLine, 0),
+		SupportResistance: make([]Level, 0),
+		TimeFrame:         TimeFrame1Day,
+		Data:              make([]identify.CandlestickWrapper, 0),
+	}
+}
+
+// LoadData loads candlestick data into the enhanced kline chart
+// 加载蜡烛图数据到增强K线图
+func (ek *EnhancedKline) LoadData(candles []*v1.Candlestick) {
+	ek.Data = make([]identify.CandlestickWrapper, len(candles))
+	for i, candle := range candles {
+		ek.Data[i] = identify.NewCandlestickWrapper(candle)
+	}
+}
+
+// AutoDetectPatterns automatically detects candlestick patterns in the data
+// 自动识别K线形态
+func (ek *EnhancedKline) AutoDetectPatterns() {
+	patterns := make([]Pattern, 0)
+
+	// Single candlestick patterns (单根K线形态)
+	for i := 0; i < len(ek.Data); i++ {
+		candle := []identify.CandlestickWrapper{ek.Data[i]}
+		timestamp := time.Unix(ek.Data[i].Timestamp, 0).Format("2006-01-02 15:04:05")
+
+		// Check single candle patterns
+		if identify.Doji(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Doji",
+				Position: i,
+				Strength: 0.7,
+				Risk:     0.5,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.Hammer(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Hammer",
+				Position: i,
+				Strength: 0.8,
+				Risk:     0.3,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.HangingMan(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Hanging Man",
+				Position: i,
+				Strength: 0.8,
+				Risk:     0.7,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.InvertedHammer(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Inverted Hammer",
+				Position: i,
+				Strength: 0.7,
+				Risk:     0.4,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.ShootingStar(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Shooting Star",
+				Position: i,
+				Strength: 0.8,
+				Risk:     0.6,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.Marubozu(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Marubozu",
+				Position: i,
+				Strength: 0.9,
+				Risk:     0.2,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.SpinningTop(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Spinning Top",
+				Position: i,
+				Strength: 0.5,
+				Risk:     0.8,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.Umbrella(candle) {
+			patterns = append(patterns, Pattern{
+				Type:     "Umbrella",
+				Position: i,
+				Strength: 0.7,
+				Risk:     0.4,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+	}
+
+	// Two candlestick patterns (双根K线形态)
+	for i := 1; i < len(ek.Data); i++ {
+		candles := []identify.CandlestickWrapper{ek.Data[i], ek.Data[i-1]}
+		timestamp := time.Unix(ek.Data[i].Timestamp, 0).Format("2006-01-02 15:04:05")
+
+		if identify.BullishEngulfing(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Bullish Engulfing",
+				Position: i,
+				Strength: 0.9,
+				Risk:     0.2,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.BearishEngulfing(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Bearish Engulfing",
+				Position: i,
+				Strength: 0.9,
+				Risk:     0.2,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.PiercingLine(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Piercing Line",
+				Position: i,
+				Strength: 0.8,
+				Risk:     0.3,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.DarkCloudCover(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Dark Cloud Cover",
+				Position: i,
+				Strength: 0.8,
+				Risk:     0.3,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.TweezerBottoms(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Tweezer Bottoms",
+				Position: i,
+				Strength: 0.7,
+				Risk:     0.4,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.TweezerTops(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Tweezer Tops",
+				Position: i,
+				Strength: 0.7,
+				Risk:     0.4,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.FallingWindow(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Falling Window",
+				Position: i,
+				Strength: 0.6,
+				Risk:     0.5,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.RisingWindow(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Rising Window",
+				Position: i,
+				Strength: 0.6,
+				Risk:     0.5,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+	}
+
+	// Three candlestick patterns (三根K线形态)
+	for i := 2; i < len(ek.Data); i++ {
+		candles := []identify.CandlestickWrapper{ek.Data[i], ek.Data[i-1], ek.Data[i-2]}
+		timestamp := time.Unix(ek.Data[i].Timestamp, 0).Format("2006-01-02 15:04:05")
+
+		if identify.MorningStar(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Morning Star",
+				Position: i,
+				Strength: 0.9,
+				Risk:     0.1,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.EveningStar(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Evening Star",
+				Position: i,
+				Strength: 0.9,
+				Risk:     0.1,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.ThreeWhiteSoldiers(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Three White Soldiers",
+				Position: i,
+				Strength: 0.95,
+				Risk:     0.1,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+
+		if identify.ThreeBlackCrows(candles) {
+			patterns = append(patterns, Pattern{
+				Type:     "Three Black Crows",
+				Position: i,
+				Strength: 0.95,
+				Risk:     0.1,
+				Price:    ek.Data[i].Close,
+				Time:     timestamp,
+			})
+		}
+	}
+
+	ek.Patterns = patterns
+}
+
+// MarkPatterns marks detected patterns on the chart
+// 在图表上标记检测到的形态
+func (ek *EnhancedKline) MarkPatterns() {
+	if len(ek.Patterns) == 0 {
+		return
+	}
+
+	// Create mark points for patterns using a simpler approach
+	// 使用更简单的方法为形态创建标记点
+	markPointData := make([]opts.MarkPointNameTypeItem, 0)
+
+	for _, pattern := range ek.Patterns {
+		// Add mark point for each pattern
+		// 为每个形态添加标记点
+		markPointData = append(markPointData, opts.MarkPointNameTypeItem{
+			Name: fmt.Sprintf("%s (%.1f)", pattern.Type, pattern.Strength),
+			Type: "max", // Use max as a placeholder
+		})
+	}
+
+	// Add mark points to the chart if any patterns were detected
+	// 如果检测到任何形态，将标记点添加到图表
+	if len(markPointData) > 0 {
+		ek.Kline.SetSeriesOptions(
+			charts.WithMarkPointNameTypeItemOpts(markPointData[0]), // Add first pattern as example
+			charts.WithMarkPointStyleOpts(opts.MarkPointStyle{
+				Label: &opts.Label{
+					Show: opts.Bool(true),
+				},
+			}),
+		)
+	}
+}
+
+// getPatternColor returns the color for a specific pattern type
+// 获取特定形态类型的颜色
+func getPatternColor(patternType string) string {
+	switch patternType {
+	// Bullish patterns (看涨形态)
+	case "Hammer", "Inverted Hammer", "Bullish Engulfing", "Piercing Line", "Morning Star", "Three White Soldiers":
+		return "#00da3c" // Green
+	// Bearish patterns (看跌形态)
+	case "Hanging Man", "Shooting Star", "Bearish Engulfing", "Dark Cloud Cover", "Evening Star", "Three Black Crows":
+		return "#ec0000" // Red
+	// Neutral/Reversal patterns (中性/反转形态)
+	case "Doji", "Spinning Top", "Tweezer Tops", "Tweezer Bottoms":
+		return "#ffaa00" // Orange
+	// Gap patterns (缺口形态)
+	case "Rising Window", "Falling Window":
+		return "#0066cc" // Blue
+	// Strong patterns (强势形态)
+	case "Marubozu":
+		return "#9900cc" // Purple
+	default:
+		return "#666666" // Gray
+	}
+}
+
+// getPatternSymbol returns the symbol for a specific pattern type
+// 获取特定形态类型的符号
+func getPatternSymbol(patternType string) string {
+	switch patternType {
+	// Bullish patterns (看涨形态)
+	case "Hammer", "Inverted Hammer", "Bullish Engulfing", "Piercing Line", "Morning Star", "Three White Soldiers":
+		return "triangle" // Triangle pointing up
+	// Bearish patterns (看跌形态)
+	case "Hanging Man", "Shooting Star", "Bearish Engulfing", "Dark Cloud Cover", "Evening Star", "Three Black Crows":
+		return "triangleDown" // Triangle pointing down
+	// Neutral/Reversal patterns (中性/反转形态)
+	case "Doji", "Spinning Top":
+		return "diamond" // Diamond
+	// Support/Resistance patterns (支撑/阻力形态)
+	case "Tweezer Tops", "Tweezer Bottoms":
+		return "rect" // Rectangle
+	// Gap patterns (缺口形态)
+	case "Rising Window", "Falling Window":
+		return "arrow" // Arrow
+	// Strong patterns (强势形态)
+	case "Marubozu":
+		return "star" // Star
+	default:
+		return "circle" // Circle
+	}
+}
+
+// CreateChart creates and configures the candlestick chart with patterns
+// 创建并配置带有形态的蜡烛图
+func (ek *EnhancedKline) CreateChart(title string) {
+	if len(ek.Data) == 0 {
+		return
+	}
+
+	// Prepare data for chart
+	// 为图表准备数据
+	x := make([]string, len(ek.Data))
+	y := make([]opts.KlineData, len(ek.Data))
+
+	for i, candle := range ek.Data {
+		x[i] = time.Unix(candle.Timestamp, 0).Format("2006-01-02")
+		y[i] = opts.KlineData{
+			Value: []interface{}{candle.Open, candle.Close, candle.Low, candle.High},
+		}
+	}
+
+	// Configure chart options
+	// 配置图表选项
+	ek.Kline.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    title,
+			Subtitle: fmt.Sprintf("Detected %d patterns", len(ek.Patterns)),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			SplitNumber: 20,
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Scale: opts.Bool(true),
+		}),
+		charts.WithDataZoomOpts(opts.DataZoom{
+			Type:       "slider",
+			Start:      0,
+			End:        100,
+			XAxisIndex: []int{0},
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "axis",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// Add data to chart
+	// 将数据添加到图表
+	ek.Kline.SetXAxis(x).AddSeries("Candlestick", y)
+
+	// Mark patterns on the chart
+	// 在图表上标记形态
+	ek.MarkPatterns()
+}
+
+// RenderToFile renders the chart to an HTML file
+// 将图表渲染到HTML文件
+func (ek *EnhancedKline) RenderToFile(filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %v", filename, err)
+	}
+	defer f.Close()
+
+	return ek.Kline.Render(io.MultiWriter(f))
+}
+
+// GetPatternSummary returns a summary of detected patterns
+// 获取检测到的形态摘要
+func (ek *EnhancedKline) GetPatternSummary() map[string]int {
+	summary := make(map[string]int)
+	for _, pattern := range ek.Patterns {
+		summary[pattern.Type]++
+	}
+	return summary
 }
