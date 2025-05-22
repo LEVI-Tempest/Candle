@@ -21,6 +21,11 @@ https://blog.csdn.net/Eumenides_max/article/details/144694349
 东方财富网的API接口  
 ```shell
 curl "http://push2.eastmoney.com/api/qt/stock/get?secid=1.600519&fields=f43,f57,f58,f59,f60,f61"
+
+# 实时
+curl https://tsanghi.com/api/fin/stock/XSHE/realtime?token=demo&ticker=300059
+# 历史
+curl https://tsanghi.com/api/fin/stock/XSHE/daily\?token\=demo\&order\=2\&ticker\=300059
 ```
 
 参数说明：
